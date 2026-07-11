@@ -13,10 +13,15 @@ public class GameManager : MonoBehaviour
     public TMP_Text gameOverScoreText;
 
     
+    public static GameManager Instance { get; private set; }
+
     [Header("Settings")]
     [Tooltip("Points gained per second")]
     public float scoreRate = 10f;
     
+    public float Score => score;
+    public bool IsGameOver => isGameOver;
+
     private float score = 0f;
     private int displayedScore = -1;
     private bool isGameOver = false;
@@ -26,6 +31,13 @@ public class GameManager : MonoBehaviour
 
     void Start()
     {
+        if (Instance != null && Instance != this)
+        {
+            Destroy(gameObject);
+            return;
+        }
+        Instance = this;
+
         Time.timeScale = 1f; 
         gameOverMenu.SetActive(false);
 
@@ -34,6 +46,14 @@ public class GameManager : MonoBehaviour
 
         // Load the saved high score once at start
         savedHighScore = PlayerPrefs.GetInt(HighScorePrefsKey, 0);
+
+        // Check for score multiplier power-up (if PowerUpManager initializes before this, great.
+        // If not, we might need a short delay, but Awake usually handles it.)
+        // We'll use a local check in Update just in case, or safely check here since PowerUpManager is Awake().
+        if (PowerUpManager.Instance != null && PowerUpManager.Instance.HasScoreMultiplier)
+        {
+            scoreRate *= 2f;
+        }
     }
 
     void Update()
@@ -78,6 +98,10 @@ public class GameManager : MonoBehaviour
         // Stop music & play death sound
         if (SoundManager.Instance != null)
             SoundManager.Instance.PlayDeathSound();
+
+        // Save earned coins
+        if (CoinManager.Instance != null)
+            CoinManager.Instance.SaveCoins();
 
         int currentScore = Mathf.FloorToInt(score);
 
