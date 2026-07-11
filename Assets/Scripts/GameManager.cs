@@ -9,54 +9,62 @@ public class GameManager : MonoBehaviour
     
     [Header("Game Over UI")]
     public GameObject gameOverMenu;
-    [Tooltip("Drag a TextMeshPro UI element here to display the final Score on the Game Over screen.")]
+    [Tooltip("Shows the score from this run.")]
     public TMP_Text gameOverScoreText;
-    [Tooltip("Drag a TextMeshPro UI element here to display the Average Score on the final Game Over screen.")]
-    public TMP_Text averageScoreText;
-    [Tooltip("Drag the Continue (Restart) button here to hide it after the 3rd attempt.")]
-    public GameObject continueButton;
+
     
     [Header("Settings")]
     [Tooltip("Points gained per second")]
     public float scoreRate = 10f;
     
     private float score = 0f;
-    private int displayedScore = -1; // Track last displayed score to avoid redundant text updates
+    private int displayedScore = -1;
     private bool isGameOver = false;
+    private int savedHighScore = 0;
 
-    private const string AttemptsPrefsKey = "Attempts";
-    private const string TotalScorePrefsKey = "TotalScore";
+    private const string HighScorePrefsKey = "HighScore";
 
     void Start()
     {
-        // Ensure the game is running at normal speed when the scene starts
         Time.timeScale = 1f; 
         gameOverMenu.SetActive(false);
 
-        // Make sure the in-game score is visible
         if (scoreText != null) 
-        {
             scoreText.gameObject.SetActive(true);
-        }
+
+        // Load the saved high score once at start
+        savedHighScore = PlayerPrefs.GetInt(HighScorePrefsKey, 0);
     }
 
     void Update()
     {
         if (!isGameOver)
         {
-            // Increase score over time using configurable rate
             score += Time.deltaTime * scoreRate; 
 
-            // Feed score to difficulty system
             if (DifficultyManager.Instance != null)
                 DifficultyManager.Instance.UpdateDifficulty(score);
 
-            // Only update the UI text when the integer score actually changes
+            // Only update UI text when integer value changes
             int currentScore = Mathf.FloorToInt(score);
             if (currentScore != displayedScore)
             {
                 displayedScore = currentScore;
-                if (scoreText != null) scoreText.text = "Score: " + currentScore.ToString();
+
+                if (scoreText != null)
+                {
+                    if (currentScore > savedHighScore)
+                    {
+                        // Beating the high score live!
+                        scoreText.text = "NEW BEST: " + currentScore.ToString();
+                        scoreText.color = Color.yellow;
+                    }
+                    else
+                    {
+                        scoreText.text = "Score: " + currentScore.ToString();
+                        scoreText.color = Color.white;
+                    }
+                }
             }
         }
     }
@@ -73,59 +81,35 @@ public class GameManager : MonoBehaviour
 
         int currentScore = Mathf.FloorToInt(score);
 
-        // 1. Hide the top-left score counter
+        // Hide in-game score counter
         if (scoreText != null)
-        {
             scoreText.gameObject.SetActive(false);
+
+        // Check and update high score
+        int savedHighScore = PlayerPrefs.GetInt(HighScorePrefsKey, 0);
+        bool isNewHighScore = currentScore > savedHighScore;
+
+        if (isNewHighScore)
+        {
+            savedHighScore = currentScore;
+            PlayerPrefs.SetInt(HighScorePrefsKey, savedHighScore);
+            PlayerPrefs.Save();
         }
 
-        // Get attempts and total score
-        int attempts = PlayerPrefs.GetInt(AttemptsPrefsKey, 0) + 1;
-        float totalScore = PlayerPrefs.GetFloat(TotalScorePrefsKey, 0f) + currentScore;
-        
-        PlayerPrefs.SetInt(AttemptsPrefsKey, attempts);
-        PlayerPrefs.SetFloat(TotalScorePrefsKey, totalScore);
-        PlayerPrefs.Save();
-
-        // 2. Show the final Score in the center
+        // Show this run's score — highlight if it's a new high score!
         if (gameOverScoreText != null)
-        {
-            gameOverScoreText.text = "Attempt " + attempts + "/3 Score: " + currentScore.ToString();
-        }
+            gameOverScoreText.text = isNewHighScore
+                ? "★ NEW HIGH SCORE: " + currentScore.ToString() + " ★"
+                : "Score: " + currentScore.ToString();
 
-        // 3. Handle 3rd attempt logic
-        if (attempts >= 3)
-        {
-            if (averageScoreText != null)
-            {
-                int avgScore = Mathf.FloorToInt(totalScore / 3f);
-                averageScoreText.text = "Final Average Score: " + avgScore.ToString();
-                averageScoreText.gameObject.SetActive(true);
-            }
-            if (continueButton != null)
-            {
-                continueButton.SetActive(false); // No more continues!
-            }
-        }
-        else
-        {
-            if (averageScoreText != null)
-            {
-                averageScoreText.gameObject.SetActive(false); // Hide average until the end
-            }
-            if (continueButton != null)
-            {
-                continueButton.SetActive(true);
-            }
-        }
 
-        gameOverMenu.SetActive(true); // Show the menu
-        Time.timeScale = 0f; // Freeze all movement and physics
+        gameOverMenu.SetActive(true);
+        Time.timeScale = 0f; // Freeze game
     }
 
     public void RestartGame()
     {
-        Time.timeScale = 1f; // Explicitly restore before reload (defensive)
+        Time.timeScale = 1f;
         SceneManager.LoadScene(SceneManager.GetActiveScene().name);
     }
 }
