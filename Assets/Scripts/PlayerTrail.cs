@@ -47,6 +47,16 @@ public class PlayerTrail : MonoBehaviour
     }
 
     /// <summary>
+    /// Call this on death — stops emission and clears all lingering particles immediately.
+    /// </summary>
+    public void ClearOnDeath()
+    {
+        if (trailParticles == null) return;
+        emission.rateOverTime = 0f;
+        trailParticles.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+    }
+
+    /// <summary>
     /// Creates a fully configured trail particle system as a child object.
     /// </summary>
     private void CreateTrailParticleSystem()

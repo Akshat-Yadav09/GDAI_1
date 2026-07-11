@@ -14,9 +14,11 @@ public class PlayerController : MonoBehaviour
     private Rigidbody2D rb;
     private GameManager gm;
     private PlayerTrail trail;
+    private PlayerExplosion explosion;
     private bool isGrounded = true;
     private bool wasGrounded = true;
     private bool jumpRequested = false;
+    private int jumpCount = 0;
     private float targetRotationZ = 0f;   // the next 90° snap target
 
     void Start()
@@ -26,6 +28,7 @@ public class PlayerController : MonoBehaviour
         if (gm == null) Debug.LogWarning("PlayerController: GameManager not found in scene!");
 
         trail = GetComponent<PlayerTrail>();
+        explosion = GetComponent<PlayerExplosion>();
 
         // Lock X so friction from obstacles can't push the player sideways.
         // Also freeze rigidbody rotation since we handle rotation visually.
@@ -49,6 +52,7 @@ public class PlayerController : MonoBehaviour
         // Allow holding spacebar, clicking/holding anywhere on screen (mobile touch), 
         // OR using the UI button to jump.
         bool isHoldingJump = Input.GetMouseButton(0) || Input.GetKey(KeyCode.Space) || jumpRequested;
+        bool isNewJumpPress = Input.GetMouseButtonDown(0) || Input.GetKeyDown(KeyCode.Space) || jumpRequested;
 
         if (isHoldingJump && isGrounded)
         {
@@ -58,9 +62,24 @@ public class PlayerController : MonoBehaviour
 
             // Set the next 90° rotation target (clockwise = negative Z)
             targetRotationZ -= 90f;
+            jumpCount = 1;
+            
+            jumpRequested = false; // consumed
+        }
+        else if (isNewJumpPress && !isGrounded && jumpCount == 1)
+        {
+            if (PowerUpManager.Instance != null && PowerUpManager.Instance.HasDoubleJump)
+            {
+                // Double Jump!
+                rb.linearVelocity = new Vector2(rb.linearVelocity.x, jumpForce);
+                targetRotationZ -= 90f;
+                jumpCount = 2;
+                
+                jumpRequested = false; // consumed
+            }
         }
         
-        // Reset the UI button request
+        // Reset the UI button request if unused
         jumpRequested = false;
 
         // Smoothly rotate toward the target while airborne
@@ -134,6 +153,7 @@ public class PlayerController : MonoBehaviour
             if (!wasGrounded && CameraShake.Instance != null)
                 CameraShake.Instance.Shake();
             isGrounded = true;
+            jumpCount = 0;
             if (trail != null) trail.SetGrounded(true);
             SnapRotation();
         }
@@ -164,21 +184,54 @@ public class PlayerController : MonoBehaviour
                 if (!wasGrounded && CameraShake.Instance != null)
                     CameraShake.Instance.Shake();
                 isGrounded = true; // Safe to jump again
+                jumpCount = 0;
                 if (trail != null) trail.SetGrounded(true);
                 SnapRotation();
             }
             // Otherwise we hit the side — game over
             else 
             {
-                if (gm != null) gm.TriggerGameOver();
+                Die(collision.gameObject);
             }
         }
 
         // 3. Hitting a SPIKE (Instant death from any angle)
         else if (collision.gameObject.CompareTag("Spike"))
         {
-            if (gm != null) gm.TriggerGameOver();
+            Die(collision.gameObject);
         }
+    }
+
+    private void Die(GameObject killer = null)
+    {
+        // Try Revive PowerUp
+        if (PowerUpManager.Instance != null && PowerUpManager.Instance.HasRevive && !PowerUpManager.Instance.ReviveUsed)
+        {
+            PowerUpManager.Instance.ReviveUsed = true;
+            
+            // Destroy the thing that killed us so we don't instantly die again
+            if (killer != null && (killer.CompareTag("Obstacle") || killer.CompareTag("Spike")))
+            {
+                Destroy(killer);
+            }
+
+            // Auto-jump to save them
+            rb.linearVelocity = Vector2.up * jumpForce;
+            targetRotationZ -= 90f;
+            jumpCount = 1; // Used up a jump
+            
+            if (CameraShake.Instance != null) CameraShake.Instance.Shake();
+            
+            // Add a little visual cue (e.g., flash the trail)
+            if (trail != null) trail.SetGrounded(false);
+            isGrounded = false;
+
+            return; // Abort death
+        }
+
+        if (trail != null) trail.ClearOnDeath();
+        if (explosion != null) explosion.Explode();
+        if (gm != null) gm.TriggerGameOver();
     }
 
     /// <summary>
