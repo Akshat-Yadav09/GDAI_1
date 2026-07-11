@@ -1,10 +1,31 @@
 using System.Collections.Generic;
 using UnityEngine;
 
+[System.Serializable]
+public class ObstaclePattern
+{
+    public string patternName;
+    [TextArea(5, 10)]
+    [Tooltip("Use 'B' for Block (Obs_2) and 'S' for Spike (Obs_1). Spaces for empty.")]
+    public string layout;
+}
+
 public class ObstacleSpawner : MonoBehaviour
 {
+    [Header("Basic Prefabs (Fallback)")]
     public GameObject[] obstaclePrefabs; // Drag multiple prefabs here in the Inspector
     public int poolSizePerPrefab = 5;   // How many of each type to pre-create
+
+    [Header("Pattern Generation")]
+    [Tooltip("Assign Obs_2 (Block) here")]
+    public GameObject blockPrefab; 
+    [Tooltip("Assign Obs_1 (Spike) here")]
+    public GameObject spikePrefab; 
+    public float gridSize = 1f; // The spacing between blocks
+    [Tooltip("Vertical offset to make spikes sit perfectly flush on blocks")]
+    public float spikeYOffset = -0.212f;
+    public ObstaclePattern[] patterns;
+    
     public float spawnRate = 2f;
 
     [Header("Spawn Randomness")]
@@ -19,6 +40,7 @@ public class ObstacleSpawner : MonoBehaviour
 
     // One pool per prefab type so we recycle the correct mesh/collider
     private List<GameObject>[] pools;
+    private List<GameObject>[] patternPools;
     private float timer = 0f;
     private float nextSpawnInterval;
     private float calculatedSafeInterval;
@@ -44,6 +66,22 @@ public class ObstacleSpawner : MonoBehaviour
                 GameObject obj = Instantiate(obstaclePrefabs[p]);
                 obj.SetActive(false);
                 pools[p].Add(obj);
+            }
+        }
+
+        // Build a separate pool for each pattern
+        if (patterns != null && patterns.Length > 0)
+        {
+            patternPools = new List<GameObject>[patterns.Length];
+            for (int p = 0; p < patterns.Length; p++)
+            {
+                patternPools[p] = new List<GameObject>();
+                for (int i = 0; i < poolSizePerPrefab; i++) // Use same pool size
+                {
+                    GameObject obj = GeneratePatternObject(patterns[p]);
+                    obj.SetActive(false);
+                    patternPools[p].Add(obj);
+                }
             }
         }
 
@@ -114,25 +152,114 @@ public class ObstacleSpawner : MonoBehaviour
 
     void SpawnObstacle()
     {
+        bool hasPatterns = patterns != null && patterns.Length > 0;
+        bool hasPrefabs = obstaclePrefabs != null && obstaclePrefabs.Length > 0;
+        
+        bool spawnPattern = hasPatterns && (!hasPrefabs || Random.value > 0.5f);
+
+        if (spawnPattern)
+        {
+            int typeIndex = Random.Range(0, patternPools.Length);
+            List<GameObject> pool = patternPools[typeIndex];
+
+            for (int i = 0; i < pool.Count; i++)
+            {
+                if (!pool[i].activeInHierarchy)
+                {
+                    pool[i].transform.position = transform.position;
+                    pool[i].SetActive(true);
+                    return;
+                }
+            }
+
+            // Pool exhausted
+            GameObject obj = GeneratePatternObject(patterns[typeIndex]);
+            obj.transform.position = transform.position;
+            pool.Add(obj);
+            Debug.LogWarning($"ObstacleSpawner: Pattern Pool '{patterns[typeIndex].patternName}' expanded to {pool.Count}.");
+            return;
+        }
+
+        if (!hasPrefabs) return;
+
         // Pick a random prefab type
-        int typeIndex = Random.Range(0, pools.Length);
-        List<GameObject> pool = pools[typeIndex];
+        int typeIndexPrefab = Random.Range(0, pools.Length);
+        List<GameObject> poolPrefab = pools[typeIndexPrefab];
 
         // Find an inactive object in that pool
-        for (int i = 0; i < pool.Count; i++)
+        for (int i = 0; i < poolPrefab.Count; i++)
         {
-            if (!pool[i].activeInHierarchy)
+            if (!poolPrefab[i].activeInHierarchy)
             {
-                pool[i].transform.position = transform.position;
-                pool[i].SetActive(true);
+                poolPrefab[i].transform.position = transform.position;
+                poolPrefab[i].SetActive(true);
                 return;
             }
         }
 
         // Pool for this type exhausted — expand dynamically
-        GameObject obj = Instantiate(obstaclePrefabs[typeIndex]);
-        obj.transform.position = transform.position;
-        pool.Add(obj);
-        Debug.LogWarning($"ObstacleSpawner: Pool for prefab '{obstaclePrefabs[typeIndex].name}' expanded to {pool.Count}.");
+        GameObject objPrefab = Instantiate(obstaclePrefabs[typeIndexPrefab]);
+        objPrefab.transform.position = transform.position;
+        poolPrefab.Add(objPrefab);
+        Debug.LogWarning($"ObstacleSpawner: Pool for prefab '{obstaclePrefabs[typeIndexPrefab].name}' expanded to {poolPrefab.Count}.");
+    }
+
+    private GameObject GeneratePatternObject(ObstaclePattern pattern)
+    {
+        // Create an empty parent object
+        GameObject parentObj = new GameObject("Pattern_" + pattern.patternName);
+        
+        // Add ObstacleMover so the whole pattern moves together
+        ObstacleMover mover = parentObj.AddComponent<ObstacleMover>();
+        
+        // Default values for the mover (will dynamically use DifficultyManager inside ObstacleMover)
+        mover.speed = 8f; 
+        mover.deadZone = -25f; // Slightly larger deadzone for big patterns
+
+        if (string.IsNullOrEmpty(pattern.layout)) return parentObj;
+
+        // Parse the layout (split by newlines)
+        string[] rows = pattern.layout.Split(new[] { '\r', '\n' }, System.StringSplitOptions.RemoveEmptyEntries);
+        
+        // In Unity, Y goes up. In text, the first row is usually the TOP.
+        // So we iterate from bottom up, or reverse the row index.
+        for (int y = 0; y < rows.Length; y++)
+        {
+            int invertedY = rows.Length - 1 - y;
+            string row = rows[y];
+            
+            for (int x = 0; x < row.Length; x++)
+            {
+                char c = row[x];
+                GameObject spawned = null;
+                float yOffset = 0f;
+                
+                if (c == 'B' || c == 'b')
+                {
+                    if (blockPrefab != null) spawned = Instantiate(blockPrefab);
+                }
+                else if (c == 'S' || c == 's')
+                {
+                    if (spikePrefab != null) 
+                    {
+                        spawned = Instantiate(spikePrefab);
+                        yOffset = spikeYOffset;
+                    }
+                }
+                
+                if (spawned != null)
+                {
+                    spawned.transform.SetParent(parentObj.transform);
+                    // Position relative to parent
+                    spawned.transform.localPosition = new Vector3(x * gridSize, invertedY * gridSize + yOffset, 0f);
+                    
+                    // Remove ObstacleMover from children since the parent handles movement
+                    ObstacleMover childMover = spawned.GetComponent<ObstacleMover>();
+                    if (childMover != null) Destroy(childMover);
+                }
+            }
+        }
+        
+        return parentObj;
     }
 }

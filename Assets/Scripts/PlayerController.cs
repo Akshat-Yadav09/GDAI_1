@@ -98,9 +98,32 @@ public class PlayerController : MonoBehaviour
         // Reset isGrounded when leaving any surface (falling off edges)
         if (collision.gameObject.CompareTag("Ground") || collision.gameObject.CompareTag("Obstacle"))
         {
-            isGrounded = false;
-            if (trail != null) trail.SetGrounded(false);
+            // Only un-ground if we aren't currently touching another ground/obstacle block
+            if (!IsTouchingGroundOrObstacle())
+            {
+                isGrounded = false;
+                if (trail != null) trail.SetGrounded(false);
+            }
         }
+    }
+
+    private bool IsTouchingGroundOrObstacle()
+    {
+        Collider2D col = GetComponent<Collider2D>();
+        if (col == null) return false;
+        
+        ContactPoint2D[] contacts = new ContactPoint2D[10];
+        int count = col.GetContacts(contacts);
+        for (int i = 0; i < count; i++)
+        {
+            GameObject obj = contacts[i].collider.gameObject;
+            if (obj.CompareTag("Ground") || obj.CompareTag("Obstacle"))
+            {
+                // Ensure we are resting on top of it, not just grazing a wall
+                if (contacts[i].normal.y > 0.1f) return true;
+            }
+        }
+        return false;
     }
 
     private void HandleCollision(Collision2D collision)
@@ -127,7 +150,16 @@ public class PlayerController : MonoBehaviour
             }
 
             // If the best normal is pointing UP (y > 0.5), we landed on top!
-            if (maxNormalY > 0.5f) 
+            // We also check if the player's bottom is roughly at or above the block's top.
+            // This prevents "ghost collisions" where sliding across multiple perfectly aligned
+            // blocks causes a tiny horizontal collision on the seams.
+            Collider2D playerCol = GetComponent<Collider2D>();
+            float playerBottom = playerCol != null ? playerCol.bounds.min.y : transform.position.y;
+            float obsTop = collision.collider.bounds.max.y;
+
+            bool isSafelyOnTop = maxNormalY > 0.5f || (playerBottom >= obsTop - 0.1f);
+
+            if (isSafelyOnTop) 
             {
                 if (!wasGrounded && CameraShake.Instance != null)
                     CameraShake.Instance.Shake();

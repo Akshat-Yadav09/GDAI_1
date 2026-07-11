@@ -67,6 +67,10 @@ public class GameManager : MonoBehaviour
         
         isGameOver = true;
         
+        // Stop music & play death sound
+        if (SoundManager.Instance != null)
+            SoundManager.Instance.PlayDeathSound();
+
         int currentScore = Mathf.FloorToInt(score);
 
         // 1. Hide the top-left score counter
