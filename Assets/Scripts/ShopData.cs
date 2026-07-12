@@ -28,7 +28,8 @@ public static class ShopData
     public static void AddCoins(int amount)
     {
         int current = GetCoins();
-        PlayerPrefs.SetInt(CoinsKey, current + amount);
+        int newTotal = Mathf.Max(0, current + amount); // Never go below 0
+        PlayerPrefs.SetInt(CoinsKey, newTotal);
         PlayerPrefs.Save();
     }
 

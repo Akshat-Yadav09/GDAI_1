@@ -23,6 +23,15 @@ public class NearMissDetector : MonoBehaviour
     private HashSet<GameObject> trackedSpikes = new HashSet<GameObject>();
     private float lastMissTime = 0f;
 
+    /// <summary>
+    /// Call this when obstacles are mass-deactivated (e.g. Revive screen wipe)
+    /// to prevent stale references from building up.
+    /// </summary>
+    public void ClearTracked()
+    {
+        trackedSpikes.Clear();
+    }
+
     void Start()
     {
         // Auto-create trigger collider if missing

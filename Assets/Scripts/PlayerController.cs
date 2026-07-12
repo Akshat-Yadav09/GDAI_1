@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.EventSystems;
 
 public class PlayerController : MonoBehaviour
 {
@@ -17,7 +18,6 @@ public class PlayerController : MonoBehaviour
     private PlayerExplosion explosion;
     private bool isGrounded = true;
     private bool wasGrounded = true;
-    private bool jumpRequested = false;
     private int jumpCount = 0;
     private float targetRotationZ = 0f;   // the next 90° snap target
 
@@ -39,20 +39,16 @@ public class PlayerController : MonoBehaviour
             visualTransform = transform;
     }
 
-    /// <summary>
-    /// Call this from a UI Button's OnClick event for mobile jump.
-    /// </summary>
-    public void Jump()
-    {
-        jumpRequested = true;
-    }
-
     void Update()
     {
-        // Allow holding spacebar, clicking/holding anywhere on screen (mobile touch), 
-        // OR using the UI button to jump.
-        bool isHoldingJump = Input.GetMouseButton(0) || Input.GetKey(KeyCode.Space) || jumpRequested;
-        bool isNewJumpPress = Input.GetMouseButtonDown(0) || Input.GetKeyDown(KeyCode.Space) || jumpRequested;
+        // Don't jump if we are clicking on a UI button (like Pause)
+        bool clickingUI = EventSystem.current != null && EventSystem.current.IsPointerOverGameObject();
+        
+        bool isClicking = Input.GetMouseButton(0) && !clickingUI;
+        bool isClickingDown = Input.GetMouseButtonDown(0) && !clickingUI;
+
+        bool isHoldingJump = isClicking || Input.GetKey(KeyCode.Space) || Input.GetKey(KeyCode.UpArrow) || Input.GetKey(KeyCode.W);
+        bool isNewJumpPress = isClickingDown || Input.GetKeyDown(KeyCode.Space) || Input.GetKeyDown(KeyCode.UpArrow) || Input.GetKeyDown(KeyCode.W);
 
         if (isHoldingJump && isGrounded)
         {
@@ -63,8 +59,6 @@ public class PlayerController : MonoBehaviour
             // Set the next 90° rotation target (clockwise = negative Z)
             targetRotationZ -= 90f;
             jumpCount = 1;
-            
-            jumpRequested = false; // consumed
         }
         else if (isNewJumpPress && !isGrounded && jumpCount == 1)
         {
@@ -75,12 +69,8 @@ public class PlayerController : MonoBehaviour
                 targetRotationZ -= 90f;
                 jumpCount = 2;
                 
-                jumpRequested = false; // consumed
             }
         }
-        
-        // Reset the UI button request if unused
-        jumpRequested = false;
 
         // Smoothly rotate toward the target while airborne
         if (!isGrounded)
@@ -207,26 +197,29 @@ public class PlayerController : MonoBehaviour
         // Try Revive PowerUp
         if (PowerUpManager.Instance != null && PowerUpManager.Instance.HasRevive && !PowerUpManager.Instance.ReviveUsed)
         {
-            PowerUpManager.Instance.ReviveUsed = true;
+            PowerUpManager.Instance.UseRevive();
             
-            // Destroy the thing that killed us so we don't instantly die again
-            if (killer != null && (killer.CompareTag("Obstacle") || killer.CompareTag("Spike")))
+            // SCREEN WIPE: Safely deactivate all moving obstacles!
+            // We use SetActive(false) instead of Destroy() so we don't break the Spawner's object pool!
+            ObstacleMover[] movers = FindObjectsByType<ObstacleMover>(FindObjectsSortMode.None);
+            foreach (ObstacleMover mover in movers) 
             {
-                Destroy(killer);
+                mover.gameObject.SetActive(false);
             }
 
-            // Auto-jump to save them
+            // Clear tracked spikes so the NearMissDetector doesn't hold stale references
+            NearMissDetector nearMiss = GetComponent<NearMissDetector>();
+            if (nearMiss != null) nearMiss.ClearTracked();
+
+            // Auto-jump to keep them safely in the air while the screen clears
             rb.linearVelocity = Vector2.up * jumpForce;
             targetRotationZ -= 90f;
-            jumpCount = 1; // Used up a jump
-            
-            if (CameraShake.Instance != null) CameraShake.Instance.Shake();
-            
-            // Add a little visual cue (e.g., flash the trail)
-            if (trail != null) trail.SetGrounded(false);
-            isGrounded = false;
+            SnapRotation();
 
-            return; // Abort death
+            // Huge camera shake for impact
+            if (CameraShake.Instance != null) CameraShake.Instance.Shake();
+
+            return; // Exit without game over!
         }
 
         if (trail != null) trail.ClearOnDeath();

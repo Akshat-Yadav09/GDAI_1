@@ -14,11 +14,16 @@ public class SoundManager : MonoBehaviour
     [Tooltip("AudioSource used for one-shot sound effects.")]
     public AudioSource sfxSource;
 
-    [Header("Clips")]
     [Tooltip("The background music that plays during gameplay.")]
     public AudioClip gameplayMusic;
     [Tooltip("The sound that plays when the player dies.")]
     public AudioClip deathSound;
+    
+    [Header("UI Sounds")]
+    public AudioClip hoverSound;
+    public AudioClip clickSound;
+    public AudioClip purchaseSound;
+    public AudioClip equipSound;
 
     [Header("Settings")]
     [Range(0f, 1f)] public float musicVolume = 0.75f;
@@ -33,6 +38,7 @@ public class SoundManager : MonoBehaviour
             return;
         }
         Instance = this;
+        DontDestroyOnLoad(gameObject); // Keep this object alive across all scenes!
 
         // Auto-create AudioSources if not manually assigned
         if (musicSource == null)
@@ -52,7 +58,7 @@ public class SoundManager : MonoBehaviour
 
     void Start()
     {
-        PlayGameplayMusic();
+        // We now let the GameManager (or other scenes) decide when to play music!
     }
 
     /// <summary>
@@ -67,6 +73,30 @@ public class SoundManager : MonoBehaviour
         musicSource.Play();
     }
 
+    public void PauseMusic()
+    {
+        if (musicSource != null && musicSource.isPlaying)
+        {
+            musicSource.Pause();
+        }
+    }
+
+    public void ResumeMusic()
+    {
+        if (musicSource != null)
+        {
+            musicSource.UnPause();
+        }
+    }
+
+    public void StopMusic()
+    {
+        if (musicSource != null)
+        {
+            musicSource.Stop();
+        }
+    }
+
     /// <summary>
     /// Stops the music and plays the death sound effect.
     /// Called by GameManager on death.
@@ -79,6 +109,28 @@ public class SoundManager : MonoBehaviour
         // Play death sfx
         if (deathSound != null)
             sfxSource.PlayOneShot(deathSound, sfxVolume);
+    }
+    
+    // --- UI SOUND HELPERS ---
+    
+    public void PlayHoverSound()
+    {
+        if (hoverSound != null) sfxSource.PlayOneShot(hoverSound, sfxVolume * 0.5f); // Hover sounds should be quieter
+    }
+
+    public void PlayClickSound()
+    {
+        if (clickSound != null) sfxSource.PlayOneShot(clickSound, sfxVolume);
+    }
+
+    public void PlayPurchaseSound()
+    {
+        if (purchaseSound != null) sfxSource.PlayOneShot(purchaseSound, sfxVolume);
+    }
+
+    public void PlayEquipSound()
+    {
+        if (equipSound != null) sfxSource.PlayOneShot(equipSound, sfxVolume);
     }
 
     /// <summary>
@@ -99,11 +151,21 @@ public class SoundManager : MonoBehaviour
         musicSource.volume = musicVolume;
     }
 
-    /// <summary>
-    /// Set SFX volume at runtime.
-    /// </summary>
     public void SetSFXVolume(float volume)
     {
         sfxVolume = Mathf.Clamp01(volume);
+    }
+
+    private bool isMuted = false;
+    
+    /// <summary>
+    /// Toggles all game audio on/off. Perfect for a Pause Menu button!
+    /// </summary>
+    public void ToggleMute()
+    {
+        isMuted = !isMuted;
+        
+        musicSource.mute = isMuted;
+        sfxSource.mute = isMuted;
     }
 }
