@@ -20,6 +20,42 @@ public class PlayerController : MonoBehaviour
     private bool wasGrounded = true;
     private int jumpCount = 0;
     private float targetRotationZ = 0f;   // the next 90° snap target
+    private float currentRotationZ = 0f;
+
+    void Awake()
+    {
+        // Fix for rotation locking: if visual is on the root object, the Rigidbody freeze constraint blocks rotation!
+        if (visualTransform == null || visualTransform == transform)
+        {
+            SpriteRenderer sr = GetComponentInChildren<SpriteRenderer>();
+            if (sr != null)
+            {
+                if (sr.gameObject == gameObject)
+                {
+                    // Move SpriteRenderer to a child object dynamically
+                    GameObject child = new GameObject("PlayerVisual");
+                    child.transform.SetParent(transform, false);
+                    SpriteRenderer childSr = child.AddComponent<SpriteRenderer>();
+                    childSr.sprite = sr.sprite;
+                    childSr.color = sr.color;
+                    childSr.material = sr.material;
+                    childSr.sortingLayerID = sr.sortingLayerID;
+                    childSr.sortingOrder = sr.sortingOrder;
+                    Destroy(sr);
+                    visualTransform = child.transform;
+                }
+                else
+                {
+                    // User already has a child visual (like "GameObject"), just use it!
+                    visualTransform = sr.transform;
+                }
+            }
+            else
+            {
+                visualTransform = transform;
+            }
+        }
+    }
 
     void Start()
     {
@@ -33,10 +69,10 @@ public class PlayerController : MonoBehaviour
         // Lock X so friction from obstacles can't push the player sideways.
         // Also freeze rigidbody rotation since we handle rotation visually.
         rb.constraints = RigidbodyConstraints2D.FreezePositionX | RigidbodyConstraints2D.FreezeRotation;
-
-        // If no visual assigned, rotate this transform directly
-        if (visualTransform == null)
-            visualTransform = transform;
+        
+        // Fix for "goes thru": Continuous collision detection prevents tunneling in the final build!
+        rb.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
+        rb.interpolation = RigidbodyInterpolation2D.Interpolate;
     }
 
     void Update()
@@ -75,11 +111,8 @@ public class PlayerController : MonoBehaviour
         // Smoothly rotate toward the target while airborne
         if (!isGrounded)
         {
-            float currentZ = visualTransform.localEulerAngles.z;
-            // Convert to signed angle for smooth Lerp
-            if (currentZ > 180f) currentZ -= 360f;
-            float newZ = Mathf.MoveTowards(currentZ, targetRotationZ, rotationSpeed * Time.deltaTime);
-            visualTransform.localEulerAngles = new Vector3(0f, 0f, newZ);
+            currentRotationZ = Mathf.MoveTowards(currentRotationZ, targetRotationZ, rotationSpeed * Time.deltaTime);
+            visualTransform.localEulerAngles = new Vector3(0f, 0f, currentRotationZ);
         }
     }
 
@@ -148,8 +181,13 @@ public class PlayerController : MonoBehaviour
             SnapRotation();
         }
         
-        // 2. Hitting an obstacle requires some math
-        else if (collision.gameObject.CompareTag("Obstacle")) 
+        // 2. Hitting a SPIKE (Instant death from any angle)
+        else if (collision.gameObject.CompareTag("Spike"))
+        {
+            Die(collision.gameObject);
+        }
+        // 3. Hitting ANYTHING ELSE (Obstacles, or if user forgot to tag it)
+        else 
         { 
             // Check ALL contact normals — use the highest Y to avoid
             // false deaths when clipping a corner
@@ -159,15 +197,13 @@ public class PlayerController : MonoBehaviour
                 maxNormalY = Mathf.Max(maxNormalY, collision.GetContact(i).normal.y);
             }
 
-            // If the best normal is pointing UP (y > 0.5), we landed on top!
-            // We also check if the player's bottom is roughly at or above the block's top.
-            // This prevents "ghost collisions" where sliding across multiple perfectly aligned
-            // blocks causes a tiny horizontal collision on the seams.
             Collider2D playerCol = GetComponent<Collider2D>();
             float playerBottom = playerCol != null ? playerCol.bounds.min.y : transform.position.y;
             float obsTop = collision.collider.bounds.max.y;
 
-            bool isSafelyOnTop = maxNormalY > 0.5f || (playerBottom >= obsTop - 0.1f);
+            // STRICTER CHECK: The normal must point UP, AND the player must actually be above the block.
+            // This prevents "false landings" where deep horizontal overlaps cause an anomalous up-normal.
+            bool isSafelyOnTop = maxNormalY > 0.5f && (playerBottom >= obsTop - 0.2f);
 
             if (isSafelyOnTop) 
             {
@@ -183,12 +219,6 @@ public class PlayerController : MonoBehaviour
             {
                 Die(collision.gameObject);
             }
-        }
-
-        // 3. Hitting a SPIKE (Instant death from any angle)
-        else if (collision.gameObject.CompareTag("Spike"))
-        {
-            Die(collision.gameObject);
         }
     }
 
@@ -233,6 +263,7 @@ public class PlayerController : MonoBehaviour
     private void SnapRotation()
     {
         targetRotationZ = Mathf.Round(targetRotationZ / 90f) * 90f;
+        currentRotationZ = targetRotationZ;
         visualTransform.localEulerAngles = new Vector3(0f, 0f, targetRotationZ);
     }
 }

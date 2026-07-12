@@ -67,5 +67,5 @@
         "*.sln": "*.csproj",
         "*.slnx": "*.csproj"
     },
-    "dotnet.defaultSolution": "-Gdai-connect-1.slnx"
+    "dotnet.defaultSolution": "playable_induction_copy.slnx"
 }

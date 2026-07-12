@@ -14,6 +14,14 @@ public class MenuCubeRotation : MonoBehaviour
     void Start()
     {
         startPos = transform.position;
+
+        // Auto-fix: If you reused the Player prefab for the menu, its physics and scripts will fight the menu rotation.
+        // We strip them out here so it spins freely!
+        Rigidbody2D rb = GetComponent<Rigidbody2D>();
+        if (rb != null) Destroy(rb);
+        
+        PlayerController pc = GetComponent<PlayerController>();
+        if (pc != null) Destroy(pc);
     }
 
     void Update()

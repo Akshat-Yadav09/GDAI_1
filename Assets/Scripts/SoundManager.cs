@@ -14,8 +14,13 @@ public class SoundManager : MonoBehaviour
     [Tooltip("AudioSource used for one-shot sound effects.")]
     public AudioSource sfxSource;
 
+    [Header("Music Clips")]
     [Tooltip("The background music that plays during gameplay.")]
     public AudioClip gameplayMusic;
+    [Tooltip("The background music that plays on the Main Menu.")]
+    public AudioClip mainMenuMusic;
+    [Tooltip("The background music that plays in the Shop.")]
+    public AudioClip shopMusic;
     [Tooltip("The sound that plays when the player dies.")]
     public AudioClip deathSound;
     
@@ -69,6 +74,30 @@ public class SoundManager : MonoBehaviour
         if (gameplayMusic == null) return;
 
         musicSource.clip = gameplayMusic;
+        musicSource.volume = musicVolume;
+        musicSource.Play();
+    }
+
+    /// <summary>
+    /// Starts the Main Menu background music.
+    /// </summary>
+    public void PlayMainMenuMusic()
+    {
+        if (mainMenuMusic == null) return;
+
+        musicSource.clip = mainMenuMusic;
+        musicSource.volume = musicVolume;
+        musicSource.Play();
+    }
+
+    /// <summary>
+    /// Starts the Shop background music.
+    /// </summary>
+    public void PlayShopMusic()
+    {
+        if (shopMusic == null) return;
+
+        musicSource.clip = shopMusic;
         musicSource.volume = musicVolume;
         musicSource.Play();
     }

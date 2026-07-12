@@ -13,8 +13,10 @@ public class CoinManager : MonoBehaviour
     public TMP_Text runCoinsText;
 
     [Header("Settings")]
-    public int scorePerCoin = 10;
-    public int coinsPerNearMiss = 5;
+    [Tooltip("Every X score points = 1 coin. Lower = more generous.")]
+    public int scorePerCoin = 3;
+    [Tooltip("Coins earned per near miss dodge.")]
+    public int coinsPerNearMiss = 15;
 
     private int coinsFromNearMisses = 0;
     private int currentRunTotal = 0;
