@@ -12,8 +12,16 @@ public class PowerUpManager : MonoBehaviour
     public bool HasScoreMultiplier { get; private set; }
     public bool HasDoubleJump { get; private set; }
 
+    [Header("UI Indicators")]
+    [Tooltip("Drag your Heart icon here")]
+    public GameObject reviveIcon;
+    [Tooltip("Drag your Feather icon here")]
+    public GameObject doubleJumpIcon;
+    [Tooltip("Drag your 2X Text here")]
+    public GameObject scoreMultiplierIcon;
+
     // Track if revive was already used during this run
-    public bool ReviveUsed { get; set; } = false;
+    public bool ReviveUsed { get; private set; } = false;
 
     void Awake()
     {
@@ -32,5 +40,20 @@ public class PowerUpManager : MonoBehaviour
         HasRevive = ShopData.ConsumePowerUp(ShopData.PowerUpReviveKey);
         HasScoreMultiplier = ShopData.ConsumePowerUp(ShopData.PowerUpScoreMultiplierKey);
         HasDoubleJump = ShopData.ConsumePowerUp(ShopData.PowerUpDoubleJumpKey);
+    }
+
+    void Start()
+    {
+        // Show or hide the icons depending on if the player bought them for this run
+        if (reviveIcon != null) reviveIcon.SetActive(HasRevive);
+        if (doubleJumpIcon != null) doubleJumpIcon.SetActive(HasDoubleJump);
+        if (scoreMultiplierIcon != null) scoreMultiplierIcon.SetActive(HasScoreMultiplier);
+    }
+
+    public void UseRevive()
+    {
+        ReviveUsed = true;
+        // Hide the heart icon so the player knows their revive is gone!
+        if (reviveIcon != null) reviveIcon.SetActive(false);
     }
 }

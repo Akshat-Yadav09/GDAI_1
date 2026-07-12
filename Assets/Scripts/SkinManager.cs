@@ -6,20 +6,22 @@ using UnityEngine;
 public class SkinManager : MonoBehaviour
 {
     private SpriteRenderer spriteRenderer;
+    private string equippedSkin;
 
     void Start()
     {
         // Get the child visual or the root sprite renderer
         spriteRenderer = GetComponentInChildren<SpriteRenderer>();
+        equippedSkin = ShopData.GetEquippedSkin(); // Cache once instead of reading PlayerPrefs every frame
         if (spriteRenderer != null)
         {
-            ApplySkin(ShopData.GetEquippedSkin());
+            ApplySkin(equippedSkin);
         }
     }
 
     void Update()
     {
-        if (spriteRenderer != null && ShopData.GetEquippedSkin() == "Rainbow")
+        if (spriteRenderer != null && equippedSkin == "Rainbow")
         {
             // Cycle hue over time (1 full cycle every 2 seconds)
             float hue = Mathf.Repeat(Time.time * 0.5f, 1f);
@@ -33,9 +35,6 @@ public class SkinManager : MonoBehaviour
         {
             case "Green":
                 spriteRenderer.color = Color.green;
-                break;
-            case "Purple":
-                spriteRenderer.color = new Color(0.6f, 0.2f, 1f);
                 break;
             case "Cyan":
                 spriteRenderer.color = Color.cyan;

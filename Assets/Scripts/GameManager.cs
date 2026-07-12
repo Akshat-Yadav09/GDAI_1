@@ -12,6 +12,12 @@ public class GameManager : MonoBehaviour
     [Tooltip("Shows the score from this run.")]
     public TMP_Text gameOverScoreText;
 
+    [Header("Pause UI")]
+    public GameObject pauseMenu;
+    public TMP_Text pauseScoreText;
+    [Tooltip("The actual pause button on screen so we can hide it on death.")]
+    public GameObject pauseButtonUI;
+
     
     public static GameManager Instance { get; private set; }
 
@@ -25,11 +31,12 @@ public class GameManager : MonoBehaviour
     private float score = 0f;
     private int displayedScore = -1;
     private bool isGameOver = false;
+    private bool isPaused = false;
     private int savedHighScore = 0;
 
     private const string HighScorePrefsKey = "HighScore";
 
-    void Start()
+    void Awake()
     {
         if (Instance != null && Instance != this)
         {
@@ -37,9 +44,13 @@ public class GameManager : MonoBehaviour
             return;
         }
         Instance = this;
+    }
 
+    void Start()
+    {
         Time.timeScale = 1f; 
         gameOverMenu.SetActive(false);
+        if (pauseMenu != null) pauseMenu.SetActive(false);
 
         if (scoreText != null) 
             scoreText.gameObject.SetActive(true);
@@ -47,18 +58,22 @@ public class GameManager : MonoBehaviour
         // Load the saved high score once at start
         savedHighScore = PlayerPrefs.GetInt(HighScorePrefsKey, 0);
 
-        // Check for score multiplier power-up (if PowerUpManager initializes before this, great.
-        // If not, we might need a short delay, but Awake usually handles it.)
-        // We'll use a local check in Update just in case, or safely check here since PowerUpManager is Awake().
+        // Check for score multiplier power-up
         if (PowerUpManager.Instance != null && PowerUpManager.Instance.HasScoreMultiplier)
         {
             scoreRate *= 2f;
+        }
+
+        // Start the music!
+        if (SoundManager.Instance != null)
+        {
+            SoundManager.Instance.PlayGameplayMusic();
         }
     }
 
     void Update()
     {
-        if (!isGameOver)
+        if (!isGameOver && !isPaused)
         {
             score += Time.deltaTime * scoreRate; 
 
@@ -103,11 +118,22 @@ public class GameManager : MonoBehaviour
         if (CoinManager.Instance != null)
             CoinManager.Instance.SaveCoins();
 
-        int currentScore = Mathf.FloorToInt(score);
-
-        // Hide in-game score counter
+        // Hide in-game UI
         if (scoreText != null)
             scoreText.gameObject.SetActive(false);
+            
+        if (pauseButtonUI != null)
+            pauseButtonUI.SetActive(false);
+
+        StartCoroutine(GameOverRoutine());
+    }
+
+    private System.Collections.IEnumerator GameOverRoutine()
+    {
+        // Wait for the death explosion, camera shake, and particles to finish naturally!
+        yield return new WaitForSeconds(0.8f);
+
+        int currentScore = Mathf.FloorToInt(score);
 
         // Check and update high score
         int savedHighScore = PlayerPrefs.GetInt(HighScorePrefsKey, 0);
@@ -120,20 +146,75 @@ public class GameManager : MonoBehaviour
             PlayerPrefs.Save();
         }
 
-        // Show this run's score — highlight if it's a new high score!
+        // Show this run's score
         if (gameOverScoreText != null)
             gameOverScoreText.text = isNewHighScore
                 ? "★ NEW HIGH SCORE: " + currentScore.ToString() + " ★"
                 : "Score: " + currentScore.ToString();
 
-
         gameOverMenu.SetActive(true);
-        Time.timeScale = 0f; // Freeze game
+        Time.timeScale = 0f; // Freeze game AFTER the animation
     }
 
     public void RestartGame()
     {
         Time.timeScale = 1f;
         SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+    }
+
+    // ==========================================
+    // PAUSE LOGIC
+    // ==========================================
+
+    public void TogglePause()
+    {
+        if (isGameOver) return;
+
+        isPaused = !isPaused;
+        if (pauseMenu != null) 
+        {
+            pauseMenu.SetActive(isPaused);
+            if (isPaused && pauseScoreText != null)
+            {
+                pauseScoreText.text = "Score: " + Mathf.FloorToInt(score).ToString();
+            }
+        }
+        Time.timeScale = isPaused ? 0f : 1f;
+
+        // Pause or resume music
+        if (SoundManager.Instance != null)
+        {
+            if (isPaused) SoundManager.Instance.PauseMusic();
+            else SoundManager.Instance.ResumeMusic();
+        }
+    }
+
+    public void ResumeGame()
+    {
+        if (isGameOver) return;
+        
+        isPaused = false;
+        if (pauseMenu != null) pauseMenu.SetActive(false);
+        Time.timeScale = 1f;
+
+        if (SoundManager.Instance != null) SoundManager.Instance.ResumeMusic();
+    }
+
+    // ==========================================
+    // SCENE NAVIGATION
+    // ==========================================
+
+    public void GoToMainMenu()
+    {
+        Time.timeScale = 1f; // Always unfreeze time before loading scenes!
+        if (SoundManager.Instance != null) SoundManager.Instance.StopMusic();
+        SceneManager.LoadScene("MainMenu");
+    }
+
+    public void GoToShop()
+    {
+        Time.timeScale = 1f;
+        if (SoundManager.Instance != null) SoundManager.Instance.StopMusic();
+        SceneManager.LoadScene("Store");
     }
 }
