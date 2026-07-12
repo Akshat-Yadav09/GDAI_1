@@ -299,7 +299,7 @@ Transform:
   m_GameObject: {fileID: 39099890}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: -420, y: 135, z: 449.4343}
+  m_LocalPosition: {x: -445.5, y: 74.8, z: 0}
   m_LocalScale: {x: 116.58826, y: 116.58826, z: 116.58826}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -352,7 +352,7 @@ SpriteRenderer:
   m_GlobalIlluminationMeshLod: 0
   m_SortingLayerID: 0
   m_SortingLayer: 0
-  m_SortingOrder: 0
+  m_SortingOrder: 2
   m_MaskInteraction: 0
   m_Sprite: {fileID: 21300000, guid: 0ef64812be6dcd04a9c63c348f80c9db, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -816,6 +816,7 @@ MonoBehaviour:
   floatAmount: 15
   scaleAmount: 1.05
   animationSpeed: 12
+  playSounds: 1
 --- !u!1 &519420028
 GameObject:
   m_ObjectHideFlags: 0
@@ -1117,6 +1118,7 @@ MonoBehaviour:
   floatAmount: 15
   scaleAmount: 1.05
   animationSpeed: 12
+  playSounds: 1
 --- !u!1 &619394800
 GameObject:
   m_ObjectHideFlags: 0
@@ -1830,6 +1832,7 @@ MonoBehaviour:
   floatAmount: 15
   scaleAmount: 1.05
   animationSpeed: 12
+  playSounds: 1
 --- !u!1 &1029501061
 GameObject:
   m_ObjectHideFlags: 0
@@ -2468,6 +2471,7 @@ MonoBehaviour:
   floatAmount: 15
   scaleAmount: 1.05
   animationSpeed: 12
+  playSounds: 1
 --- !u!1 &1201838505
 GameObject:
   m_ObjectHideFlags: 0
@@ -2585,7 +2589,7 @@ Transform:
   m_GameObject: {fileID: 1252284860}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: -420, y: 160, z: 449.4343}
+  m_LocalPosition: {x: -445.5, y: 100.3, z: 0}
   m_LocalScale: {x: 116.58826, y: 116.58826, z: 116.58826}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -2638,7 +2642,7 @@ SpriteRenderer:
   m_GlobalIlluminationMeshLod: 0
   m_SortingLayerID: 0
   m_SortingLayer: 0
-  m_SortingOrder: 0
+  m_SortingOrder: 2
   m_MaskInteraction: 0
   m_Sprite: {fileID: 21300000, guid: 61c37ebb595fb874aa6182b412206da0, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -2936,6 +2940,7 @@ MonoBehaviour:
   floatAmount: 15
   scaleAmount: 1.05
   animationSpeed: 12
+  playSounds: 1
 --- !u!1 &1389809098
 GameObject:
   m_ObjectHideFlags: 0
@@ -3070,7 +3075,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -420, y: 110}
+  m_AnchoredPosition: {x: -445.5, y: 44.199997}
   m_SizeDelta: {x: 57.25, y: 17.39}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &1480752182
@@ -3221,6 +3226,7 @@ MonoBehaviour:
   floatAmount: 15
   scaleAmount: 1.05
   animationSpeed: 12
+  playSounds: 1
 --- !u!1 &1596225876
 GameObject:
   m_ObjectHideFlags: 0

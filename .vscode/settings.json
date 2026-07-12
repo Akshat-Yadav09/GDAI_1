@@ -67,5 +67,5 @@
         "*.sln": "*.csproj",
         "*.slnx": "*.csproj"
     },
-    "dotnet.defaultSolution": "GDAI_1.slnx"
+    "dotnet.defaultSolution": "-Gdai-connect-1.slnx"
 }
