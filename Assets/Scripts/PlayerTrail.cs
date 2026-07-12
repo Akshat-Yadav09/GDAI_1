@@ -23,7 +23,6 @@ public class PlayerTrail : MonoBehaviour
     public float particleSize = 0.15f;
     public float particleLifetime = 0.3f;
 
-    private ParticleSystem.EmissionModule emission;
     private bool isGrounded = true;
 
     void Start()
@@ -31,8 +30,11 @@ public class PlayerTrail : MonoBehaviour
         if (trailParticles == null)
             CreateTrailParticleSystem();
 
-        emission = trailParticles.emission;
-        emission.rateOverTime = groundEmissionRate;
+        if (trailParticles != null)
+        {
+            var em = trailParticles.emission;
+            em.rateOverTime = groundEmissionRate;
+        }
     }
 
 
@@ -43,7 +45,11 @@ public class PlayerTrail : MonoBehaviour
     {
         if (isGrounded == grounded) return; // Skip if no change
         isGrounded = grounded;
-        emission.rateOverTime = isGrounded ? groundEmissionRate : airEmissionRate;
+        if (trailParticles != null)
+        {
+            var em = trailParticles.emission;
+            em.rateOverTime = isGrounded ? groundEmissionRate : airEmissionRate;
+        }
     }
 
     /// <summary>
@@ -52,7 +58,8 @@ public class PlayerTrail : MonoBehaviour
     public void ClearOnDeath()
     {
         if (trailParticles == null) return;
-        emission.rateOverTime = 0f;
+        var em = trailParticles.emission;
+        em.rateOverTime = 0f;
         trailParticles.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
     }
 
@@ -110,11 +117,18 @@ public class PlayerTrail : MonoBehaviour
         var emissionModule = trailParticles.emission;
         emissionModule.rateOverTime = groundEmissionRate;
 
-        // Renderer — use default sprite with additive blending for glow
+        // Renderer — use player's sprite material to ensure it exists in the build
         var renderer = trailParticles.GetComponent<ParticleSystemRenderer>();
-        renderer.material = new Material(Shader.Find("Particles/Standard Unlit"));
-        renderer.material.SetFloat("_Mode", 1); // Additive
-        renderer.material.color = trailColor;
+        SpriteRenderer sr = GetComponentInChildren<SpriteRenderer>();
+        if (sr != null && sr.sharedMaterial != null)
+        {
+            renderer.material = sr.sharedMaterial;
+        }
+        else
+        {
+            Shader sprShader = Shader.Find("Sprites/Default");
+            if (sprShader != null) renderer.material = new Material(sprShader);
+        }
 
         // Start playing
         trailParticles.Play();

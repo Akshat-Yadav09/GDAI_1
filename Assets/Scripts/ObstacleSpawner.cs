@@ -8,6 +8,9 @@ public class ObstaclePattern
     [TextArea(5, 10)]
     [Tooltip("Use 'B' for Block (Obs_2) and 'S' for Spike (Obs_1). Spaces for empty.")]
     public string layout;
+    [Tooltip("Higher weight = more likely to spawn. Default is 1.")]
+    [Min(0.01f)]
+    public float spawnWeight = 1f;
 }
 
 public class ObstacleSpawner : MonoBehaviour
@@ -44,6 +47,7 @@ public class ObstacleSpawner : MonoBehaviour
     private float timer = 0f;
     private float nextSpawnInterval;
     private float calculatedSafeInterval;
+    private float totalPatternWeight;
 
     void Start()
     {
@@ -83,6 +87,14 @@ public class ObstacleSpawner : MonoBehaviour
                     patternPools[p].Add(obj);
                 }
             }
+        }
+
+        // Pre-calculate total pattern weight for weighted random selection
+        totalPatternWeight = 0f;
+        if (patterns != null)
+        {
+            for (int i = 0; i < patterns.Length; i++)
+                totalPatternWeight += patterns[i].spawnWeight;
         }
 
         // Pick a random interval for the first spawn
@@ -159,7 +171,8 @@ public class ObstacleSpawner : MonoBehaviour
 
         if (spawnPattern)
         {
-            int typeIndex = Random.Range(0, patternPools.Length);
+            // Weighted random selection: pick a pattern based on its spawnWeight
+            int typeIndex = GetWeightedPatternIndex();
             List<GameObject> pool = patternPools[typeIndex];
 
             for (int i = 0; i < pool.Count; i++)
@@ -202,6 +215,24 @@ public class ObstacleSpawner : MonoBehaviour
         objPrefab.transform.position = transform.position;
         poolPrefab.Add(objPrefab);
         Debug.LogWarning($"ObstacleSpawner: Pool for prefab '{obstaclePrefabs[typeIndexPrefab].name}' expanded to {poolPrefab.Count}.");
+    }
+
+    /// <summary>
+    /// Picks a pattern index using weighted random selection.
+    /// Patterns with higher spawnWeight are chosen more often.
+    /// </summary>
+    private int GetWeightedPatternIndex()
+    {
+        float roll = Random.Range(0f, totalPatternWeight);
+        float cumulative = 0f;
+        for (int i = 0; i < patterns.Length; i++)
+        {
+            cumulative += patterns[i].spawnWeight;
+            if (roll <= cumulative)
+                return i;
+        }
+        // Fallback (shouldn't reach here)
+        return patterns.Length - 1;
     }
 
     private GameObject GeneratePatternObject(ObstaclePattern pattern)

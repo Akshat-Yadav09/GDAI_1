@@ -40,6 +40,10 @@ public class ShopManager : MonoBehaviour
         
         UpdateCoinUI();
         UpdateAllButtonUI();
+
+        // Start the shop music!
+        if (SoundManager.Instance != null)
+            SoundManager.Instance.PlayShopMusic();
     }
 
     private void UpdateCoinUI()
@@ -98,9 +102,9 @@ public class ShopManager : MonoBehaviour
     }
 
     public void EquipDefaultSkin() { BuyOrEquipSkin("Default", 0); } // Default is Red
-    public void EquipGreenSkin()   { BuyOrEquipSkin("Green", 500); }
-    public void EquipCyanSkin()    { BuyOrEquipSkin("Cyan", 1000); }
-    public void EquipRainbowSkin() { BuyOrEquipSkin("Rainbow", 5000); }
+    public void EquipGreenSkin()   { BuyOrEquipSkin("Green", 150); }
+    public void EquipCyanSkin()    { BuyOrEquipSkin("Cyan", 350); }
+    public void EquipRainbowSkin() { BuyOrEquipSkin("Rainbow", 1000); }
 
 
     // ==========================================
@@ -110,7 +114,7 @@ public class ShopManager : MonoBehaviour
     {
         if (PlayerPrefs.GetInt(ShopData.PowerUpDoubleJumpKey, 0) == 1) return; // Already active!
 
-        int cost = 2000;
+        int cost = 500;
         if (ShopData.GetCoins() >= cost)
         {
             ShopData.AddCoins(-cost);
@@ -128,7 +132,7 @@ public class ShopManager : MonoBehaviour
     {
         if (PlayerPrefs.GetInt(ShopData.PowerUpReviveKey, 0) == 1) return; // Already active!
 
-        int cost = 1000;
+        int cost = 300;
         if (ShopData.GetCoins() >= cost)
         {
             ShopData.AddCoins(-cost);
@@ -146,7 +150,7 @@ public class ShopManager : MonoBehaviour
     {
         if (PlayerPrefs.GetInt(ShopData.PowerUpScoreMultiplierKey, 0) == 1) return; // Already active!
 
-        int cost = 1500;
+        int cost = 400;
         if (ShopData.GetCoins() >= cost)
         {
             ShopData.AddCoins(-cost);
@@ -168,7 +172,7 @@ public class ShopManager : MonoBehaviour
     public void ToggleCubePet()
     {
         string petName = "CubePet";
-        int cost = 5000; // Updated to match your UI!
+        int cost = 800; // Game jam friendly price!
         string ownedKey = "PetOwned_" + petName;
         bool isOwned = PlayerPrefs.GetInt(ownedKey, 0) == 1;
 
